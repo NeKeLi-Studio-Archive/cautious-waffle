@@ -1,0 +1,62 @@
+name: ZIP → JAR
+
+# Wrzuć plik .zip (z folderami .github, src oraz plikami .gitignore, pom.xml) do repozytorium.
+# Workflow rozpakuje go, zbuduje Mavenem i opublikuje gotowy .jar w zakładce Releases.
+
+on:
+  push:
+    paths:
+      - '**.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  zip-to-jar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Rozpakuj ZIP
+        run: |
+          ZIP=$(find . -name '*.zip' -not -path './.git/*' | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "Nie znaleziono pliku .zip w repozytorium."
+            exit 1
+          fi
+          echo "Używam: $ZIP"
+          mkdir -p "$RUNNER_TEMP/project"
+          unzip -q -o "$ZIP" -d "$RUNNER_TEMP/project"
+          POM=$(find "$RUNNER_TEMP/project" -name pom.xml | head -n 1)
+          if [ -z "$POM" ]; then
+            echo "W pliku ZIP nie ma pom.xml."
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$POM")" >> "$GITHUB_ENV"
+
+      - name: Zbuduj JAR (Maven)
+        run: mvn -B -f "$PROJECT_DIR/pom.xml" clean package
+
+      - name: Wgraj JAR jako artefakt
+        uses: actions/upload-artifact@v4
+        with:
+          name: MapthioMenus-jar
+          path: ${{ env.PROJECT_DIR }}/target/MapthioMenus-*.jar
+          if-no-files-found: error
+
+      - name: Opublikuj JAR w Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" "$PROJECT_DIR"/target/MapthioMenus-*.jar \
+            --title "Mapthio Menus build ${{ github.run_number }}" \
+            --notes "JAR zbudowany automatycznie z pliku ZIP." \
+            --repo "${{ github.repository }}"
