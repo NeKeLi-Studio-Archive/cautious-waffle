@@ -1,0 +1,21 @@
+name: MapthioMenus
+version: '${project.version}'
+main: pl.mapthio.menus.MapthioMenus
+api-version: '26.3'
+author: Mapthio
+description: Twórz menu/GUI bezpośrednio w grze - zmieniaj bloki, nazwy, enchant effect i komendy slotów.
+
+commands:
+  mapthio:
+    description: Zarządzanie menu Mapthio Menus
+    usage: /<command> help
+    aliases: [mmenus, mapthiomenus]
+    permission: mapthio.admin
+
+permissions:
+  mapthio.admin:
+    description: Tworzenie i edycja menu
+    default: op
+  mapthio.use:
+    description: Otwieranie menu komendami przypisanymi do menu
+    default: true
